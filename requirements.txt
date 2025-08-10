@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+chromadb
+openai>=1.40.0
+pdfminer.six
+python-docx
+python-pptx
+openpyxl
+PyYAML
+# (OCR optional)
+# pillow
+# pytesseract

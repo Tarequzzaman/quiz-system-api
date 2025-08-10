@@ -1,0 +1,28 @@
+services:
+  api:
+    build: .
+    image: async-upload-api:local
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app/app
+    env_file:
+      - .env
+    environment:
+      - WORK_DIR=/app/uploaded_files
+      - MAX_UPLOAD_MB=200
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_EMBED_MODEL=text-embedding-3-small 
+    volumes:
+      - ./app:/app/app
+      - ./uploaded_files:/app/uploaded_files
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  uploaded_files:
