@@ -16,6 +16,7 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL}
       - OPENAI_EMBED_MODEL=text-embedding-3-small 
     volumes:
       - ./app:/app/app

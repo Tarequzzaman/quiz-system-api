@@ -1,26 +1,38 @@
 import os
 from pathlib import Path
+from typing import List
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from .jobs import Job, create_job, get_job
+from .quiz import generate_quiz_from_chunks
+from .rag import RAGIndex
 from .storage import job_in_dir, safe_name
 from .tasks import process_job
 
-app = FastAPI(title="Async Upload API (BackgroundTasks)")
+app = FastAPI()
 
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+    "http://localhost:8004",
+    "http://localhost:5173",
+    "*",
+]
 
-from typing import List
-
-from fastapi import FastAPI, File
-from pydantic import BaseModel
-
-from .quiz import generate_quiz_from_chunks
-from .rag import RAGIndex
-
-app = FastAPI(title="Async Upload API (BackgroundTasks, multi-file)")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class QuizIn(BaseModel):
@@ -34,8 +46,6 @@ class QuizIn(BaseModel):
 def create_quiz(body: QuizIn):
     work_dir = os.getenv("WORK_DIR", "/app/uploaded_files")
     idx = RAGIndex(work_dir=work_dir, collection=body.jobId)
-
-    # pull all chunks for this jobId
     docs, metas = idx.get_all_for_docset(body.jobId)
     if not docs:
         raise HTTPException(
@@ -123,3 +133,14 @@ def job_result(job_id: str):
     if not path.exists():
         raise HTTPException(410, "Result expired")
     return FileResponse(path)
+
+
+@app.get("/jobs/all/{job_id}/docksets")
+def get_docsets(job_id: str):
+    work_dir = os.getenv("WORK_DIR", "/app/uploaded_files")
+    idx = RAGIndex(work_dir=work_dir, collection=job_id)
+    docsets, metas = idx.get_all_for_docset(docset_id=job_id)
+
+    if not docsets:
+        raise HTTPException(404, "Docsets not found")
+    return {"docsets": docsets, "metas": metas}
