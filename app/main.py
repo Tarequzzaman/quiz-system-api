@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 from uuid import uuid4
 
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from .jobs import Job, create_job, get_job
-from .quiz import generate_quiz_from_chunks
+from .quiz import evaluate_short_answer, generate_quiz_from_chunks
 from .rag import RAGIndex
 from .storage import job_in_dir, safe_name
 from .tasks import process_job
@@ -38,7 +38,12 @@ app.add_middleware(
 class QuizIn(BaseModel):
     jobId: str
     numQuestions: int = 12
-    types: list[str] = ["mcq_single", "mcq_multi", "true_false"]
+    types: list[str] = [
+        "mcq_single",
+        "mcq_multi",
+        "true_false",
+        "answer_short_question",
+    ]
     topicHint: str | None = None
 
 
@@ -53,6 +58,7 @@ def create_quiz(body: QuizIn):
         )
 
     types = body.types
+    print(types)
 
     quiz = generate_quiz_from_chunks(
         docs=docs,
@@ -144,3 +150,20 @@ def get_docsets(job_id: str):
     if not docsets:
         raise HTTPException(404, "Docsets not found")
     return {"docsets": docsets, "metas": metas}
+
+
+class EvaluateAnswerRequest(BaseModel):
+    user_answer: str
+    question: dict
+
+
+@app.post("/evaluate_short_answer")  # Changed from GET to POST
+def evaluate_user_answer(body: EvaluateAnswerRequest):
+    """
+    Evaluate the user's answer against the correct answer(s) for a given question.
+
+    Request body:
+    - user_answer: The student's answer text
+    - question: Question object containing grading criteria and citations
+    """
+    return evaluate_short_answer(user_answer=body.user_answer, question=body.question)
