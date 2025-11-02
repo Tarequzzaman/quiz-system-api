@@ -54,8 +54,6 @@ def _difficulty_from_level(level: int) -> str:
         return "medium"
     return "hard"
 
-
-# ---- UPDATED SCHEMA (adds answer_short_question and grading) ----
 QUIZ_JSON_SCHEMA = """\
 Return STRICT JSON with this shape:
 
@@ -69,13 +67,13 @@ Return STRICT JSON with this shape:
       "difficulty": "easy" | "medium" | "hard",
       "question": string,
       "options": [string, ...],
-      "correctAnswers": [string, ...],   // for short-answer: MUST be []
+      "correctAnswers": [string, ...],
       "explanation": string,
       "citations": [ { "source": string, "chunk": number } ],
-      "grading": {                      // REQUIRED for answer_short_question; OPTIONAL otherwise
-        "rubric": string,               // clear criteria grounded in context
-        "keywords": [string, ...],      // expected key terms/phrases present in the context
-        "maxChars": number              // OPTIONAL cap for learner's response (e.g. 300)
+      "grading": {
+        "rubric": string,
+        "keywords": [string, ...],
+        "maxChars": number
       }
     }
   ]
@@ -83,13 +81,12 @@ Return STRICT JSON with this shape:
 Rules:
 - id is unique per question, e.g. "q1", "q2", etc.
 - type is one of: "true_false", "mcq_single", "mcq_multi", "answer_short_question".
-- level is an integer from 1 to 10, where 1 is easiest and 10 is hardest.
-- For mcq_single: correctAnswers length MUST be 1 (one option TEXT).
-- For mcq_multi: correctAnswers length MUST be between 2 and 4 (inclusive).
+- level is an integer from 1 to 10 (1=easiest, 10=hardest). difficulty mapping: 1-5 easy, 6-7 medium, 8-10 hard.
+- All content MUST be grounded ONLY in the provided context and include ≥1 citation per question.
+- For mcq_single: Generate high-quality multiple-choice questions of type 'mcq_single' with 3-5 options and 1 correct answer.
+- For mcq_multi: options length 4-6; correctAnswers length MUST be 2-4 and each MUST exactly match items in options.
 - For true_false: options MUST be ["True","False"]; correctAnswers MUST be ["True"] or ["False"].
-- For answer_short_question: options MUST be [], and correctAnswers MUST be [] (answers are NOT revealed). Include a concise grading rubric and keywords grounded in the provided context.
-- Each question MUST include level 1-10. Map difficulty: 1-5 easy, 6-7 medium, 8-10 hard.
-- All content MUST be grounded ONLY in context and include at least one citation per question.
+- For answer_short_question: options MUST be []; correctAnswers MUST be []; the expected answer MUST be inferable in the rubric/keywords; the actual answer MUST NOT be revealed; target answer length ≤ 3 words.
 """
 
 SYSTEM_PROMPT = (
@@ -306,7 +303,7 @@ def generate_quiz_from_chunks(
     prompt = _build_user_prompt(topic_hint, packed, num_questions, types)
     resp = client.chat.completions.create(
         model=model,
-        temperature=0.9,
+        temperature=0.2,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},

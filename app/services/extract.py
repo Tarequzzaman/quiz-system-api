@@ -11,7 +11,6 @@ from typing import Iterable, List, Tuple, Union
 import yaml
 
 
-# Optional deps are imported lazily so the module works even if not installed.
 def _try_import(mod):
     try:
         return __import__(mod)

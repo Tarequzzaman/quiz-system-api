@@ -17,13 +17,28 @@ services:
       - PYTHONUNBUFFERED=1
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL}
-      - OPENAI_EMBED_MODEL=text-embedding-3-small 
+      - OPENAI_EMBED_MODEL=text-embedding-3-small
     volumes:
       - ./app:/app/app
       - ./uploaded_files:/app/uploaded_files
     ports:
       - "8000:8000"
     restart: unless-stopped
+    depends_on:
+      - db
+  db:
+    image: postgres:17.4
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - data:/var/lib/postgresql/data
+    env_file:
+      - .env
 
 volumes:
+  data: {}
   uploaded_files:
